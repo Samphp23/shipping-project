@@ -1,0 +1,8 @@
+{"storage_account_name": "blobstorageshipping",
+  "blob_container_name": "shippingproject",
+  "destination_container_name": "shippingsilver",
+  "account_url": "https://blobstorageshipping.blob.core.windows.net/",
+  "blob_account_Key":"78T1KqROuyY1ECWncGGI8eFh8211pOO6UMSkR5v42ztRcL1ee4UjNF07v0bruMem2U2zW6wozi7l+ASt3iRDpQ==",
+  "conn_string":"DefaultEndpointsProtocol=https;AccountName=blobstorageshipping;AccountKey=78T1KqROuyY1ECWncGGI8eFh8211pOO6UMSkR5v42ztRcL1ee4UjNF07v0bruMem2U2zW6wozi7l+ASt3iRDpQ==;EndpointSuffix=core.windows.net",
+  "df_columns": ["Sender","Sender_ID","ProductionDate","DeliveryDate","ArrivalDate","Load_Port","LoadPort_Term","Disch_Port","DischPort_Term","Units","Cargo_Segment","BrandName","Model","L_m","Width_m","Height_m","Weight","CBM","Booking","GateIn","CreatedBy","Ref"]
+  }

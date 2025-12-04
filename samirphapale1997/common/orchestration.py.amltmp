@@ -1,0 +1,150 @@
+import os
+import sys
+import json
+import logging
+import datetime
+import argparse
+import subprocess
+import pandas as pd
+from io import StringIO
+from azure.storage.blob import BlobServiceClient
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+def load_config(confi_path):
+    try:
+        with open(confi_path) as f:
+            confi = json.load(f)
+        required_keys = ["conn_string", "blob_container_name", "account_url"]
+        for k in required_keys:
+            if k not in confi:
+                raise KeyError(f"Missing required config key: {k}")
+        return confi
+    except Exception as e:
+        raise Exception(f"Error loading config file: {e}")  
+
+def parse_payload():
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--filename")
+        parser.add_argument("--source_blob")  # or --blob_path if you align names
+        args = parser.parse_args()
+        if not args.filename or not args.source_blob:
+            raise ValueError("Both --filename and --source_blob must be provided")
+        payload = {
+            "filename": args.filename,
+            "source_blob": args.source_blob
+        }
+        return payload["filename"], payload["source_blob"]
+
+    except Exception as e:
+        raise Exception(f"Error parsing payload: {e}")
+
+def connect_blob(conn_string, container_name):
+    try:
+        blob_service_client = BlobServiceClient.from_connection_string(conn_string)
+        return blob_service_client.get_container_client(container_name)
+    except Exception as e:
+        raise Exception(f"Blob connection error: {e}")
+
+def main():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    confi_path = os.path.join(base_dir, "common","confi.json")
+    confi = load_config(confi_path)
+    filename, source_blob = parse_payload()
+    client = connect_blob(confi["conn_string"], confi["blob_container_name"])
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        orchestration_blob = "common/orcestation_path.csv"
+        data = client.download_blob(orchestration_blob).readall()
+        df = pd.read_csv(StringIO(data.decode("utf-8")), dtype=str)
+    except Exception as e:
+        raise Exception(f"Error reading orchestration_map.csv: {e}")
+
+    try:
+        data1 = client.download_blob(source_blob).readall()
+        df1 = pd.read_csv(StringIO(data1.decode("utf-8")), dtype=str)
+        df1.columns = df1.columns.str.strip()
+    except Exception as e:
+        raise Exception(f"Error downloading or reading blob file: {e}")
+
+    try:
+        df1_cols = set(df1.columns)
+        results = []
+        for _, row in df.iterrows():
+            row_cols = set(c.strip() for c in row['All_Columns'].split(','))
+            common = df1_cols.intersection(row_cols)
+            match_percent = (len(common) / len(df1_cols)) * 100
+            if match_percent > 70:
+                results.append({
+                    "Customer": row["Customer"],
+                    "Path": row["Path"],
+                    "Match%": match_percent
+                })
+        if not results:
+            raise ValueError("No matching path found for received file")
+        source_path = pd.DataFrame(results)["Path"].iloc[0]
+    except Exception as e:
+        raise Exception(f"Error while finding path of received file: {e}")
+
+    try:
+        base, ext = os.path.splitext(filename)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        new_filename = f"{base}_{timestamp}{ext}"
+        destination_blob = f"customer{source_path}/{new_filename}"
+        source_blob_url = f"{confi['account_url']}{confi['blob_container_name']}/{source_blob}"
+        dest_client = client.get_blob_client(destination_blob)
+        dest_client.start_copy_from_url(source_blob_url)
+        logging.info(f"Copied blob to {destination_blob}")
+    except Exception as e:
+        raise Exception(f"Error while copying file to client folder: {e}")
+
+    # try:
+    #     client.delete_blob(source_blob)
+    #     logging.info(f"Deleted source blob {source_blob}")
+    # except Exception as e:
+    #     raise Exception(f"Error while deleting source blob: {e}")
+
+    try:
+        script_name = source_path.split("/")[1].lower()
+        if script_name == "kia":
+            kia_path = os.path.join(base_dir, "kia", "kia.py")
+            logging.info("Running kia.py...")
+            subprocess.run([sys.executable, kia_path, "--destination_blob", destination_blob], check=True)
+        elif script_name == "hyundai":
+            hyundai_path = os.path.join(base_dir, "hyundai", "hyundai.py")
+            logging.info("Running hyundai.py...")
+            subprocess.run([sys.executable, hyundai_path, "--destination_blob", destination_blob], check=True)
+        elif script_name == "mahindra":
+            mahindra_path = os.path.join(base_dir, "mahindra", "mahindra.py")
+            logging.info("Running mahindra.py...")
+            subprocess.run([sys.executable, mahindra_path, "--destination_blob", destination_blob], check=True)
+        elif script_name == "maruti_suzuki":
+            maruti_suzuki_path = os.path.join(base_dir, "maruti_suzuki", "maruti_suzuki.py")
+            logging.info("Running maruti_suzuki.py...")
+            subprocess.run([sys.executable, maruti_suzuki_path, "--destination_blob", destination_blob], check=True)
+        elif script_name == "tata":
+            tata_path = os.path.join(base_dir, "tata", "tata.py")
+            logging.info("Running tata.py...")
+            subprocess.run([sys.executable, tata_path, "--destination_blob", destination_blob], check=True) 
+        elif script_name == "toyota":
+            toyota_path = os.path.join(base_dir, "toyota", "toyota.py")
+            logging.info("Running toyota.py...")
+            subprocess.run([sys.executable, toyota_path, "--destination_blob", destination_blob], check=True)
+        else:
+            raise ValueError(f"Unknown script target: {script_name}")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Script execution failed: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"Error determining which script to run: {e}")
+        raise
+
+    logging.info("SUCCESS: Bronze_layer script completed without errors.")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        logging.error(f"ERROR OCCURRED: {e}", exc_info=True)
+        sys.exit(1)
