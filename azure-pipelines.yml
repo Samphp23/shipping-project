@@ -1,7 +1,9 @@
-# Simple Azure DevOps Pipeline
-# Place this file at the root of your repo
+# CI/CD pipeline from GitHub to Azure DevOps
 
-trigger: none   # pipeline triggered externally (Logic App), not on code push
+trigger:
+  branches:
+    include:
+      - main   # pipeline runs on every push to main branch
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -10,21 +12,21 @@ variables:
   pythonVersion: '3.x'
 
 jobs:
-- job: RunForecastPipeline
-  displayName: Run Forecast Pipeline
+- job: BuildAndRun
+  displayName: Build and Run Python Scripts
   steps:
     # Step 1: Set up Python
     - task: UsePythonVersion@0
       inputs:
         versionSpec: $(pythonVersion)
 
-    # Step 2: Install dependencies from requirements.txt
+    # Step 2: Install dependencies
     - script: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-      displayName: Install Python Dependencies
+      displayName: Install Dependencies
 
-    # Step 3: Run your first script (which internally calls another script)
+    # Step 3: Run your driver script (which calls other scripts)
     - script: |
-        python scripts/driver_script.py --date $(forecast_date)
-      displayName: Run Driver Script
+        python orchestration.py
+      displayName: Run Orchestration Script
