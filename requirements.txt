@@ -1,0 +1,39 @@
+# Core Azure ML SDK
+azureml-core==1.61.0
+azureml-pipeline-core==1.61.0
+azureml-pipeline-steps==1.61.0
+
+# Data & ML packages
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.0
+
+# Additional packages
+pyarrow==17.0.0
+sqlalchemy==2.0.31
+pyodbc==5.1.0
+openpyxl==3.1.5
+
+# Azure Storage & Identity
+azure-storage-blob==12.20.0
+azure-identity==1.17.1
+
+# Key Vault SDK
+azure-keyvault-secrets==4.8.0
+
+
+
+🔑 Notes
+- Version pinning: I’ve pinned stable versions as of late 2025 so your builds are reproducible.
+- Updates: If you want flexibility, you can drop the ==version pins, but for CI/CD pipelines it’s best to pin.
+- Placement: Store this file at the root of your repo (next to azure-pipelines.yml).
+- Pipeline step: In your YAML, replace the install block with:
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: Install Dependencies
+
+
+
+This way, every time you push code changes to GitHub, Azure DevOps will automatically pick up the latest script and dependencies from requirements.txt.
+👉 Do you want me to also show you how to reference this requirements.txt in your Azure ML Environment so both DevOps and ML pipelines stay perfectly aligned?
