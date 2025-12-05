@@ -1,0 +1,30 @@
+# Simple Azure DevOps Pipeline
+# Place this file at the root of your repo
+
+trigger: none   # pipeline triggered externally (Logic App), not on code push
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  pythonVersion: '3.x'
+
+jobs:
+- job: RunForecastPipeline
+  displayName: Run Forecast Pipeline
+  steps:
+    # Step 1: Set up Python
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: $(pythonVersion)
+
+    # Step 2: Install dependencies from requirements.txt
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: Install Python Dependencies
+
+    # Step 3: Run your first script (which internally calls another script)
+    - script: |
+        python scripts/driver_script.py --date $(forecast_date)
+      displayName: Run Driver Script
