@@ -1,9 +1,7 @@
-# CI/CD pipeline from GitHub to Azure DevOps
-
 trigger:
   branches:
     include:
-      - main   # pipeline runs on every push to main branch
+      - main            # Run pipeline on every push to main
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -13,20 +11,26 @@ variables:
 
 jobs:
 - job: BuildAndRun
-  displayName: Build and Run Python Scripts
+  displayName: "Build and Run Python Scripts"
+
   steps:
-    # Step 1: Set up Python
+
+    # Step 1: Checkout Code
+    - checkout: self
+      clean: true
+
+    # Step 2: Set up Python
     - task: UsePythonVersion@0
       inputs:
         versionSpec: $(pythonVersion)
 
-    # Step 2: Install dependencies
+    # Step 3: Install Dependencies
     - script: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-      displayName: Install Dependencies
+      displayName: "Install Dependencies"
 
-    # Step 3: Run your driver script (which calls other scripts)
+    # Step 4: Run Your Orchestration Script
     - script: |
         python orchestration.py
-      displayName: Run Orchestration Script
+      displayName: "Run Orchestration Script"
